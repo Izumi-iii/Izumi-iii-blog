@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>博客管理台</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1d2433;
+      --muted: #667085;
+      --line: #d9dee8;
+      --panel: #ffffff;
+      --soft: #f5f7fb;
+      --accent: #2563eb;
+      --accent-dark: #1d4ed8;
+      --danger: #b42318;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--soft);
+    }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 64px;
+      padding: 12px 28px;
+      color: white;
+      background: #182230;
+    }
+    .brand { font-weight: 700; letter-spacing: .01em; }
+    .topbar-actions { display: flex; align-items: center; gap: 12px; }
+    .status { color: #b8c2d3; font-size: 13px; }
+    .shell {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: calc(100vh - 64px);
+    }
+    aside {
+      padding: 22px 16px;
+      background: #202b3b;
+      color: #dbe3ef;
+    }
+    .list-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 8px 12px;
+      font-size: 13px;
+      color: #aebbd0;
+    }
+    .post-list { display: grid; gap: 4px; }
+    .post-item {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      color: inherit;
+      text-align: left;
+      background: transparent;
+    }
+    .post-item:hover, .post-item.active {
+      border-color: #40516b;
+      background: #2a3950;
+    }
+    .post-item-title { display: block; font-weight: 600; }
+    .post-item-meta { display: block; margin-top: 4px; color: #aebbd0; font-size: 12px; }
+    main { min-width: 0; padding: 28px; }
+    .panel {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+    .intro { max-width: 660px; margin: 40px auto; text-align: center; }
+    h1 { margin: 0 0 8px; font-size: 26px; }
+    h2 { margin: 0; font-size: 20px; }
+    p { line-height: 1.65; }
+    .muted { color: var(--muted); }
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 22px;
+    }
+    label { display: grid; gap: 7px; color: #344054; font-size: 13px; font-weight: 600; }
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 10px 11px;
+      color: var(--ink);
+      background: white;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: 2px solid #bfd2ff;
+      border-color: var(--accent);
+    }
+    textarea { min-height: 420px; resize: vertical; line-height: 1.6; }
+    .wide { grid-column: 1 / -1; }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .toolbar-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .button {
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 9px 13px;
+      color: #344054;
+      background: white;
+    }
+    .button:hover { border-color: #9aa8bc; background: #f8fafc; }
+    .button.primary { border-color: var(--accent); color: white; background: var(--accent); }
+    .button.primary:hover { border-color: var(--accent-dark); background: var(--accent-dark); }
+    .button.danger { color: var(--danger); }
+    .editor-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 18px;
+    }
+    .editor-pane { min-width: 0; }
+    .pane-label {
+      display: block;
+      margin-bottom: 8px;
+      color: #475467;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .preview {
+      min-height: 420px;
+      overflow-wrap: anywhere;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: #fbfcfe;
+      line-height: 1.7;
+    }
+    .preview h1, .preview h2, .preview h3 { margin: 1em 0 .45em; }
+    .preview h1 { font-size: 26px; }
+    .preview h2 { font-size: 21px; }
+    .preview h3 { font-size: 17px; }
+    .preview p { margin: .7em 0; }
+    .preview ul { padding-left: 22px; }
+    .preview pre {
+      overflow-x: auto;
+      padding: 12px;
+      border-radius: 5px;
+      color: #e5e7eb;
+      background: #172033;
+    }
+    .preview code { padding: 2px 4px; border-radius: 3px; background: #eef2f7; }
+    .preview pre code { padding: 0; background: transparent; }
+    .notice {
+      margin-top: 16px;
+      padding: 11px 13px;
+      border-left: 3px solid #f59e0b;
+      color: #7a4b00;
+      background: #fff8e7;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .error { color: var(--danger); }
+    .hidden { display: none !important; }
+    @media (max-width: 820px) {
+      .topbar { padding: 12px 16px; }
+      .shell { display: block; }
+      aside { padding: 14px 16px; }
+      .post-list { display: flex; overflow-x: auto; }
+      .post-item { min-width: 190px; }
+      main { padding: 16px; }
+      .panel { padding: 16px; }
+      .field-grid, .editor-grid { grid-template-columns: 1fr; }
+      .wide { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Izumi-iii · 博客管理台</div>
+    <div class="topbar-actions">
+      <span id="status" class="status">未连接 GitHub</span>
+      <button id="logoutButton" class="button hidden">退出</button>
+    </div>
+  </header>
+
+  <section id="loginView" class="panel intro">
+    <h1>登录后管理文章</h1>
+    <p class="muted">这是个人管理页面。Token 只保存在当前浏览器会话中，关闭标签页后会清除。</p>
+    <label>
+      GitHub Fine-grained Token
+      <input id="tokenInput" type="password" autocomplete="off" placeholder="粘贴只允许访问博客源码仓库的 Token">
+    </label>
+    <button id="loginButton" class="button primary" style="margin-top: 16px;">连接 GitHub</button>
+    <div class="notice">
+      建议创建 Fine-grained token，只授予 <strong>Izumi-iii/Izumi-iii-blog</strong> 仓库的 Contents 读写权限。不要把 Token 发给别人。
+      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">创建 Token</a>
+    </div>
+    <p id="loginError" class="error"></p>
+  </section>
+
+  <div id="appView" class="shell hidden">
+    <aside>
+      <div class="list-heading">
+        <span>文章</span>
+        <button id="newButton" class="button">新建</button>
+      </div>
+      <div id="postList" class="post-list"></div>
+    </aside>
+    <main>
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h2 id="editorHeading">新建文章</h2>
+            <div id="saveInfo" class="muted">发布后 GitHub Actions 会自动更新网站。</div>
+          </div>
+          <div class="toolbar-actions">
+            <button id="deleteButton" class="button danger hidden">删除文章</button>
+            <button id="publishButton" class="button primary">发布文章</button>
+          </div>
+        </div>
+        <div class="field-grid">
+          <label>
+            标题
+            <input id="titleInput" placeholder="文章标题">
+          </label>
+          <label>
+            文件名
+            <input id="slugInput" placeholder="例如 my-first-post">
+          </label>
+          <label>
+            日期
+            <input id="dateInput" type="datetime-local">
+          </label>
+          <label>
+            标签
+            <input id="tagsInput" placeholder="用逗号分隔，例如 Hexo, 随笔">
+          </label>
+          <label>
+            分类
+            <input id="categoryInput" placeholder="例如 随笔">
+          </label>
+          <div></div>
+          <label class="wide">
+            正文 Markdown
+            <div class="editor-grid">
+              <div class="editor-pane">
+                <span class="pane-label">编辑</span>
+                <textarea id="bodyInput" placeholder="在这里写文章正文"></textarea>
+              </div>
+              <div class="editor-pane">
+                <span class="pane-label">预览</span>
+                <div id="preview" class="preview"></div>
+              </div>
+            </div>
+          </label>
+        </div>
+        <p id="editorError" class="error"></p>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const CONFIG = {
+      owner: "Izumi-iii",
+      repo: "Izumi-iii-blog",
+      branch: "main",
+      postsPath: "source/_posts"
+    };
+    const API = "https://api.github.com";
+    const tokenKey = "izumiiii_blog_admin_token";
+    let token = sessionStorage.getItem(tokenKey) || "";
+    let current = null;
+    let posts = [];
+
+    const $ = (id) => document.getElementById(id);
+    const headers = () => ({
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${token}`,
+      "X-GitHub-Api-Version": "2022-11-28"
+    });
+    const repoUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}`;
+
+    function setStatus(text) { $("status").textContent = text; }
+    function showError(id, message) { $(id).textContent = message || ""; }
+    function encodeBase64(text) {
+      const bytes = new TextEncoder().encode(text);
+      let binary = "";
+      bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+      return btoa(binary);
+    }
+    function decodeBase64(value) {
+      const binary = atob(value.replace(/\s/g, ""));
+      const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+      return new TextDecoder().decode(bytes);
+    }
+    function slugify(value) {
+      return value.trim().toLowerCase()
+        .replace(/[^\w\u4e00-\u9fff-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    }
+    function yamlValue(value) {
+      return String(value || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    }
+    function makeMarkdown() {
+      const tags = $("tagsInput").value.split(",").map((item) => item.trim()).filter(Boolean);
+      const category = $("categoryInput").value.trim();
+      const date = $("dateInput").value ? $("dateInput").value.replace("T", " ") + ":00" : new Date().toISOString().slice(0, 16).replace("T", " ") + ":00";
+      const lines = [
+        "---",
+        `title: "${yamlValue($("titleInput").value.trim())}"`,
+        `date: ${date}`,
+        "tags:"
+      ];
+      tags.forEach((tag) => lines.push(`  - "${yamlValue(tag)}"`));
+      if (category) lines.push(`categories:\n  - "${yamlValue(category)}"`);
+      lines.push("---", "", $("bodyInput").value.trim(), "");
+      return lines.join("\n");
+    }
+    function parseMarkdown(markdown) {
+      const match = markdown.match(/^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/);
+      if (!match) return { title: "", date: "", tags: [], category: "", body: markdown };
+      const front = match[1];
+      const body = match[2].trim();
+      const read = (key) => {
+        const found = front.match(new RegExp(`^${key}:\\s*["']?(.+?)["']?\\s*$`, "m"));
+        return found ? found[1].replace(/\\"/g, '"') : "";
+      };
+      const tagsBlock = front.match(/^tags:\s*\n((?:\s+-\s+.*\n?)+)/m);
+      const tags = tagsBlock ? [...tagsBlock[1].matchAll(/^\s+-\s+["']?(.+?)["']?\s*$/gm)].map((match) => match[1]) : [];
+      const categoriesBlock = front.match(/^categories:\s*\n((?:\s+-\s+.*\n?)+)/m);
+      const categories = categoriesBlock ? [...categoriesBlock[1].matchAll(/^\s+-\s+["']?(.+?)["']?\s*$/gm)].map((match) => match[1]) : [];
+      return { title: read("title"), date: read("date"), tags, category: categories[0] || "", body };
+    }
+    function toLocalDate(value) {
+      const date = new Date(value.replace(" ", "T"));
+      if (Number.isNaN(date.getTime())) return "";
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    }
+    function renderMarkdown(markdown) {
+      const escaped = escapeHtml(markdown);
+      const blocks = escaped.split("```");
+      return blocks.map((block, index) => {
+        if (index % 2 === 1) return `<pre><code>${block.trim()}</code></pre>`;
+        return block.split(/\n{2,}/).map((paragraph) => {
+          const lines = paragraph.split("\n");
+          if (lines.every((line) => /^\s*[-*]\s+/.test(line))) {
+            return `<ul>${lines.map((line) => `<li>${inlineMarkdown(line.replace(/^\s*[-*]\s+/, ""))}</li>`).join("")}</ul>`;
+          }
+          if (/^###\s+/.test(paragraph)) return `<h3>${inlineMarkdown(paragraph.replace(/^###\s+/, ""))}</h3>`;
+          if (/^##\s+/.test(paragraph)) return `<h2>${inlineMarkdown(paragraph.replace(/^##\s+/, ""))}</h2>`;
+          if (/^#\s+/.test(paragraph)) return `<h1>${inlineMarkdown(paragraph.replace(/^#\s+/, ""))}</h1>`;
+          return `<p>${inlineMarkdown(paragraph).replace(/\n/g, "<br>")}</p>`;
+        }).join("");
+      }).join("");
+    }
+    function inlineMarkdown(value) {
+      return value
+        .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g, '<img alt="$1" src="$2" style="max-width:100%">')
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+        .replace(/`([^`]+)`/g, "<code>$1</code>");
+    }
+    function updatePreview() { $("preview").innerHTML = renderMarkdown($("bodyInput").value || "文章预览会显示在这里。"); }
+    function resetEditor() {
+      current = null;
+      $("editorHeading").textContent = "新建文章";
+      $("titleInput").value = "";
+      $("slugInput").value = "";
+      $("dateInput").value = new Date().toISOString().slice(0, 16);
+      $("tagsInput").value = "";
+      $("categoryInput").value = "";
+      $("bodyInput").value = "";
+      $("deleteButton").classList.add("hidden");
+      $("saveInfo").textContent = "发布后 GitHub Actions 会自动更新网站。";
+      document.querySelectorAll(".post-item").forEach((item) => item.classList.remove("active"));
+      updatePreview();
+    }
+    function fillEditor(post, markdown) {
+      const parsed = parseMarkdown(markdown);
+      current = post;
+      $("editorHeading").textContent = "编辑文章";
+      $("titleInput").value = parsed.title;
+      $("slugInput").value = post.name.replace(/\.md$/i, "");
+      $("dateInput").value = toLocalDate(parsed.date);
+      $("tagsInput").value = parsed.tags.join(", ");
+      $("categoryInput").value = parsed.category;
+      $("bodyInput").value = parsed.body;
+      $("deleteButton").classList.remove("hidden");
+      $("saveInfo").textContent = `当前文件：${post.name}`;
+      updatePreview();
+    }
+    async function github(path, options = {}) {
+      const response = await fetch(`${API}${path}`, { ...options, headers: { ...headers(), ...(options.headers || {}) } });
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        throw new Error(detail.message || `GitHub 请求失败（${response.status}）`);
+      }
+      return response.status === 204 ? null : response.json();
+    }
+    async function loadPosts() {
+      const result = await github(`/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.postsPath}?ref=${CONFIG.branch}`);
+      posts = (Array.isArray(result) ? result : []).filter((item) => item.type === "file" && item.name.endsWith(".md")).sort((a, b) => b.name.localeCompare(a.name));
+      $("postList").innerHTML = posts.length ? posts.map((post) => `<button class="post-item" data-name="${encodeURIComponent(post.name)}"><span class="post-item-title">${escapeHtml(post.name.replace(/\.md$/i, ""))}</span><span class="post-item-meta">Markdown 文章</span></button>`).join("") : '<p class="muted">还没有文章</p>';
+      document.querySelectorAll(".post-item").forEach((item) => item.addEventListener("click", async () => {
+        const post = posts.find((entry) => entry.name === decodeURIComponent(item.dataset.name));
+        if (!post) return;
+        try {
+          const file = await github(`/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.postsPath}/${encodeURIComponent(post.name)}?ref=${CONFIG.branch}`);
+          fillEditor(post, decodeBase64(file.content));
+          document.querySelectorAll(".post-item").forEach((entry) => entry.classList.remove("active"));
+          item.classList.add("active");
+          showError("editorError", "");
+        } catch (error) { showError("editorError", error.message); }
+      }));
+    }
+    async function connect() {
+      showError("loginError", "");
+      token = $("tokenInput").value.trim();
+      if (!token) return showError("loginError", "请先粘贴 GitHub Token。");
+      try {
+        const user = await github("/user");
+        await github(`/repos/${CONFIG.owner}/${CONFIG.repo}`);
+        sessionStorage.setItem(tokenKey, token);
+        $("loginView").classList.add("hidden");
+        $("appView").classList.remove("hidden");
+        $("logoutButton").classList.remove("hidden");
+        setStatus(`已连接：${user.login}`);
+        resetEditor();
+        await loadPosts();
+      } catch (error) {
+        token = "";
+        showError("loginError", `${error.message}。请确认 Token 对源码仓库有 Contents 读写权限。`);
+      }
+    }
+    async function publish() {
+      showError("editorError", "");
+      const title = $("titleInput").value.trim();
+      const slug = slugify($("slugInput").value || title);
+      if (!title || !slug || !$("bodyInput").value.trim()) return showError("editorError", "请填写标题、文件名和正文。");
+      const path = `${CONFIG.postsPath}/${slug}.md`;
+      const oldPath = current ? `${CONFIG.postsPath}/${current.name}` : "";
+      try {
+        let sha = current?.sha;
+        if (current && oldPath !== path) {
+          await github(`/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${encodeURIComponent(oldPath)}`, {
+            method: "DELETE",
+            body: JSON.stringify({ message: `Rename post ${current.name}`, sha: current.sha, branch: CONFIG.branch })
+          });
+          sha = undefined;
+        }
+        await github(`/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${path.split("/").map(encodeURIComponent).join("/")}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            message: `${current ? "Update" : "Add"} post: ${title}`,
+            content: encodeBase64(makeMarkdown()),
+            branch: CONFIG.branch,
+            ...(sha ? { sha } : {})
+          })
+        });
+        $("saveInfo").textContent = "已提交到 GitHub，网站正在自动构建。通常几十秒后可见。";
+        await loadPosts();
+      } catch (error) { showError("editorError", error.message); }
+    }
+    async function removePost() {
+      if (!current || !confirm(`确定删除《${$("titleInput").value}》吗？`)) return;
+      try {
+        await github(`/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.postsPath}/${encodeURIComponent(current.name)}`, {
+          method: "DELETE",
+          body: JSON.stringify({ message: `Delete post: ${current.name}`, sha: current.sha, branch: CONFIG.branch })
+        });
+        resetEditor();
+        await loadPosts();
+      } catch (error) { showError("editorError", error.message); }
+    }
+    $("loginButton").addEventListener("click", connect);
+    $("newButton").addEventListener("click", resetEditor);
+    $("publishButton").addEventListener("click", publish);
+    $("deleteButton").addEventListener("click", removePost);
+    $("bodyInput").addEventListener("input", updatePreview);
+    $("logoutButton").addEventListener("click", () => {
+      sessionStorage.removeItem(tokenKey);
+      location.reload();
+    });
+    if (token) connect();
+  </script>
+</body>
+</html>
