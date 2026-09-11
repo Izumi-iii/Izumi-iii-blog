@@ -8,13 +8,15 @@ on:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-  group: pages-deploy
+  group: pages
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
@@ -32,16 +34,18 @@ jobs:
       - name: Build Hexo site
         run: npm run build
 
-      - name: Publish generated site
-        env:
-          DEPLOY_TOKEN: ${{ secrets.PAGES_DEPLOY_TOKEN }}
-        run: |
-          test -n "$DEPLOY_TOKEN"
-          git -C public init
-          git -C public config user.name "github-actions[bot]"
-          git -C public config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C public add --all
-          git -C public commit -m "Deploy Hexo site" || true
-          git -C public branch -M main
-          git -C public remote add origin "https://x-access-token:${DEPLOY_TOKEN}@github.com/Izumi-iii/Izumi-iii.github.io.git"
-          git -C public push --force origin main
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
