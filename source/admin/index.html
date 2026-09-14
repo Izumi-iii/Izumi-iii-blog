@@ -411,7 +411,21 @@
       updatePreview();
     }
     async function github(path, options = {}) {
-      const response = await fetch(`${API}${path}`, { ...options, headers: { ...headers(), ...(options.headers || {}) } });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
+      let response;
+      try {
+        response = await fetch(`${API}${path}`, {
+          ...options,
+          headers: { ...headers(), ...(options.headers || {}) },
+          signal: controller.signal
+        });
+      } catch (error) {
+        if (error.name === "AbortError") throw new Error("连接 GitHub 超时，请检查网络后重试");
+        throw new Error("无法连接 GitHub API，请检查网络");
+      } finally {
+        clearTimeout(timeout);
+      }
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}));
         throw new Error(detail.message || `GitHub 请求失败（${response.status}）`);
@@ -438,19 +452,25 @@
       showError("loginError", "");
       token = $("tokenInput").value.trim();
       if (!token) return showError("loginError", "请先粘贴 GitHub Token。");
+      $("loginButton").disabled = true;
+      $("loginButton").textContent = "连接中...";
+      setStatus("正在连接 GitHub...");
       try {
-        const user = await github("/user");
         await github(`/repos/${CONFIG.owner}/${CONFIG.repo}`);
         sessionStorage.setItem(tokenKey, token);
         $("loginView").classList.add("hidden");
         $("appView").classList.remove("hidden");
         $("logoutButton").classList.remove("hidden");
-        setStatus(`已连接：${user.login}`);
+        setStatus("已连接 GitHub");
         resetEditor();
         await loadPosts();
       } catch (error) {
         token = "";
+        setStatus("未连接 GitHub");
         showError("loginError", `${error.message}。请确认 Token 对源码仓库有 Contents 读写权限。`);
+      } finally {
+        $("loginButton").disabled = false;
+        $("loginButton").textContent = "连接 GitHub";
       }
     }
     async function publish() {
