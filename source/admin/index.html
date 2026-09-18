@@ -119,9 +119,11 @@
     }
     .toolbar-actions { display: flex; flex-wrap: wrap; gap: 8px; }
     .button {
+      display: inline-block;
       border: 1px solid var(--line);
       border-radius: 5px;
       padding: 9px 13px;
+      text-decoration: none;
       color: #344054;
       background: white;
     }
@@ -204,6 +206,7 @@
     <div class="brand">Izumi-iii · 博客管理台</div>
     <div class="topbar-actions">
       <span id="status" class="status">未连接 GitHub</span>
+      <a class="button" href="/">回到主页</a>
       <button id="logoutButton" class="button hidden">退出</button>
     </div>
   </header>
