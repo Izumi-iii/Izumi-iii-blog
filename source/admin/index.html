@@ -137,11 +137,20 @@
     .editor-pane { min-width: 0; }
     .pane-label {
       display: block;
-      margin-bottom: 8px;
       color: #475467;
       font-size: 13px;
       font-weight: 700;
     }
+    .pane-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .pane-tools { display: flex; align-items: center; gap: 8px; }
+    .pane-tools .button { padding: 7px 11px; font-size: 12px; }
+    .upload-status { min-height: 18px; margin-top: 7px; font-size: 12px; }
     .preview {
       min-height: 420px;
       overflow-wrap: anywhere;
@@ -260,8 +269,15 @@
             正文 Markdown
             <div class="editor-grid">
               <div class="editor-pane">
-                <span class="pane-label">编辑</span>
+                <div class="pane-header">
+                  <span class="pane-label">编辑</span>
+                  <div class="pane-tools">
+                    <button id="uploadImageButton" class="button" type="button">上传图片</button>
+                    <input id="imageInput" class="hidden" type="file" accept="image/*" multiple>
+                  </div>
+                </div>
                 <textarea id="bodyInput" placeholder="在这里写文章正文"></textarea>
+                <div id="imageStatus" class="upload-status muted"></div>
               </div>
               <div class="editor-pane">
                 <span class="pane-label">预览</span>
@@ -281,7 +297,8 @@
       owner: "Izumi-iii",
       repo: "Izumi-iii-blog",
       branch: "main",
-      postsPath: "source/_posts"
+      postsPath: "source/_posts",
+      imagesPath: "source/images/posts"
     };
     const API = "https://api.github.com";
     const tokenKey = "izumiiii_blog_admin_token";
@@ -376,8 +393,8 @@
     }
     function inlineMarkdown(value) {
       return value
-        .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g, '<img alt="$1" src="$2" style="max-width:100%">')
-        .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+        .replace(/!\[([^\]]*)\]\(((?:https?:\/\/|\/)[^)\s]+)\)/g, '<img alt="$1" src="$2" style="max-width:100%">')
+        .replace(/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
         .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
         .replace(/\*([^*]+)\*/g, "<em>$1</em>")
         .replace(/`([^`]+)`/g, "<code>$1</code>");
@@ -411,9 +428,31 @@
       $("saveInfo").textContent = `当前文件：${post.name}`;
       updatePreview();
     }
-    async function github(path, options = {}) {
+    function encodePath(path) {
+      return path.split("/").map(encodeURIComponent).join("/");
+    }
+    function readFileBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(",")[1]);
+        reader.onerror = () => reject(new Error(`读取图片失败：${file.name}`));
+        reader.readAsDataURL(file);
+      });
+    }
+    function insertAtCursor(text) {
+      const input = $("bodyInput");
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      input.value = input.value.slice(0, start) + text + input.value.slice(end);
+      const cursor = start + text.length;
+      input.selectionStart = cursor;
+      input.selectionEnd = cursor;
+      input.focus();
+      updatePreview();
+    }
+    async function github(path, options = {}, timeoutMs = 12000) {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 12000);
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
       let response;
       try {
         response = await fetch(`${API}${path}`, {
@@ -432,6 +471,53 @@
         throw new Error(detail.message || `GitHub 请求失败（${response.status}）`);
       }
       return response.status === 204 ? null : response.json();
+    }
+    async function uploadImages(files) {
+      showError("editorError", "");
+      $("imageStatus").textContent = "";
+      if (!files.length) return;
+      const slug = slugify($("slugInput").value || $("titleInput").value);
+      if (!slug) return showError("editorError", "请先填写标题或文件名，再上传图片。");
+
+      const maxBytes = 10 * 1024 * 1024;
+      for (const file of files) {
+        if (!file.type.startsWith("image/")) return showError("editorError", `不是图片文件：${file.name}`);
+        if (file.size > maxBytes) return showError("editorError", `图片超过 10 MB：${file.name}`);
+      }
+
+      $("uploadImageButton").disabled = true;
+      $("imageInput").disabled = true;
+      const stamp = new Date().toISOString().replace(/\D/g, "").slice(0, 14);
+      try {
+        for (let index = 0; index < files.length; index += 1) {
+          const file = files[index];
+          $("imageStatus").textContent = `正在上传 ${index + 1}/${files.length}：${file.name}`;
+          const extensionMatch = file.name.match(/\.[a-zA-Z0-9]+$/);
+          const extension = extensionMatch ? extensionMatch[0].toLowerCase() : ".png";
+          const baseName = slugify(file.name.slice(0, extensionMatch ? -extension.length : undefined)) || "image";
+          const fileName = `${stamp}-${index + 1}-${baseName}${extension}`;
+          const repoPath = `${CONFIG.imagesPath}/${slug}/${fileName}`;
+          const content = await readFileBase64(file);
+          await github(`/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${encodePath(repoPath)}`, {
+            method: "PUT",
+            body: JSON.stringify({
+              message: `Upload image for ${slug}`,
+              content,
+              branch: CONFIG.branch
+            })
+          }, 60000);
+          const publicUrl = `/images/posts/${encodeURIComponent(slug)}/${encodeURIComponent(fileName)}`;
+          insertAtCursor(`\n![${file.name.replace(/\.[^.]+$/, "")}](${publicUrl})\n`);
+        }
+        $("imageStatus").textContent = `已上传并插入 ${files.length} 张图片`;
+      } catch (error) {
+        showError("editorError", error.message);
+        $("imageStatus").textContent = "";
+      } finally {
+        $("uploadImageButton").disabled = false;
+        $("imageInput").disabled = false;
+        $("imageInput").value = "";
+      }
     }
     async function loadPosts() {
       const result = await github(`/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.postsPath}?ref=${CONFIG.branch}`);
@@ -518,6 +604,8 @@
     $("newButton").addEventListener("click", resetEditor);
     $("publishButton").addEventListener("click", publish);
     $("deleteButton").addEventListener("click", removePost);
+    $("uploadImageButton").addEventListener("click", () => $("imageInput").click());
+    $("imageInput").addEventListener("change", (event) => uploadImages([...event.target.files]));
     $("bodyInput").addEventListener("input", updatePreview);
     $("logoutButton").addEventListener("click", () => {
       sessionStorage.removeItem(tokenKey);
