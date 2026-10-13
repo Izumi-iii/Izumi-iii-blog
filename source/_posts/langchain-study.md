@@ -2,7 +2,8 @@
 title: "深入浅出 LangChain：大模型应用开发核心框架全解析"
 date: 2026-10-13 11:42:00
 tags:
-  - "ai agent"
+  - "AI Agent"
+  - "LangChain"
 categories:
   - "学习笔记"
 ---

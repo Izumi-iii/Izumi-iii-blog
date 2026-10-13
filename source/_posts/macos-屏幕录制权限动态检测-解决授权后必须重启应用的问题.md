@@ -2,7 +2,9 @@
 title: "macOS 屏幕录制权限动态检测：解决授权后必须重启应用的问题"
 date: 2026-09-23 03:01:00
 tags:
-  - "权限获取，macOS，Swift"
+  - "权限获取"
+  - "macOS"
+  - "Swift"
 categories:
   - "macOS"
 ---

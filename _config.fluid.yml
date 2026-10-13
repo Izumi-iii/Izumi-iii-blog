@@ -1,4 +1,5 @@
 navbar:
+  blog_title: "Izumi-iii"
   menu:
     - { key: "home", link: "/", icon: "iconfont icon-home-fill" }
     - { key: "archive", link: "/archives/", icon: "iconfont icon-archive-fill" }
@@ -6,3 +7,31 @@ navbar:
     - { key: "tag", link: "/tags/", icon: "iconfont icon-tags-fill" }
     - { key: "about", link: "/about/", icon: "iconfont icon-user-fill" }
     - { key: "admin", name: "管理台", link: "/admin/", icon: "iconfont icon-user-fill" }
+
+custom_css:
+  - /css/refinement.css
+custom_js:
+  - /js/refinement.js
+
+banner:
+  parallax: false
+fun_features:
+  typing:
+    enable: false
+index:
+  banner_img_height: 86
+  banner_mask_alpha: 0.38
+  slogan:
+    text: "Izumi-iii 的开发笔记"
+post:
+  banner_img_height: 48
+  default_index_img: ""
+scroll_down_arrow:
+  banner_height_limit: 80
+
+about:
+  banner_img_height: 50
+  name: "Izumi-iii"
+  intro: "记录编程学习、项目实践与问题排查"
+  icons:
+    - { class: "iconfont icon-github-fill", link: "https://github.com/Izumi-iii", tip: "GitHub" }
