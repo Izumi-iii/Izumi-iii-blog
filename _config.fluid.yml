@@ -26,6 +26,10 @@ index:
 post:
   banner_img_height: 48
   default_index_img: ""
+  math:
+    enable: true
+    specific: false
+    engine: mathjax
 scroll_down_arrow:
   banner_height_limit: 80
 
